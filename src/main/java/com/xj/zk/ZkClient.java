@@ -1,6 +1,7 @@
 package com.xj.zk;
 
 import com.xj.zk.listener.Listener;
+import com.xj.zk.lock.SimpleLock;
 import com.xj.zk.watcher.WatcherProcess;
 import com.xj.zk.watcher.ZkWatcher;
 import org.apache.zookeeper.CreateMode;
@@ -436,7 +437,14 @@ public class ZkClient {
     public boolean isConnection() {
         return isConnection;
     }
-
+    /**
+     * 获取锁对象
+     * @param lockPath
+     * @return
+     */
+    public SimpleLock getLock(String lockPath) {
+        return new SimpleLock(this, lockPath);
+    }
     /**
      * 获取原生的zookeeper客户端对象
      * @return

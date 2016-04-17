@@ -1,6 +1,7 @@
 package com.xj.zk;
 
 import com.xj.zk.listener.Listener;
+import com.xj.zk.lock.SimpleLock;
 import org.apache.zookeeper.Watcher;
 import org.junit.After;
 import org.junit.Before;
@@ -56,7 +57,18 @@ public class ZkClientTest {
             }
         });
     }
-
+    @Test
+    public void lock() {
+        SimpleLock lock = zk.getLock("/zk/lock");//创建锁对象
+        try {
+            if (lock.lock(0)) {//获得锁
+                System.out.println("-------------");
+                //处理业务
+            }
+        }finally {
+            lock.unlock();//释放锁
+        }
+    }
     @After
     public void close() {
         try {

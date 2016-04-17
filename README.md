@@ -1,7 +1,7 @@
 ## zkclient 项目
 ---
 ###项目介绍：
-zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重连，session过期重注册，watch事件改为listen监听事件等
+zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重连，session过期重注册，watch事件改为listen监听事件,分布式锁等
 
 
 ###使用方式：
@@ -41,4 +41,15 @@ zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重
 		System.out.println(path + " " + eventType.name() + " " + new String(data));
 		}
 	});
-	4.  其它API的使用基本和zookeeper原生的一样
+	4. 分布式锁的使用
+	public void lock() {
+		SimpleLock lock = zk.getLock("/zk/lock");//创建锁对象
+		try {
+			if (lock.lock(0)) {//获得锁
+				//处理业务
+			}
+		}finally {
+			lock.unlock();//释放锁
+		}
+	}
+	5.  其它API的使用基本和zookeeper原生的一样
