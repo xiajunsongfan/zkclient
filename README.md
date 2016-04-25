@@ -12,6 +12,7 @@ zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重
     	<version>1.0.0-SNAPSHOT</version>
 	</dependency>
 
+```java
 	1. 创建zkclient实例
 	//参数：zookeeper地址，session超时时间（毫秒），连接超时时间（毫秒）
 	ZkClient zk = new ZkClient("127.0.0.1:2181", 5000, 3000);
@@ -51,5 +52,8 @@ zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重
 		}finally {
 			lock.unlock();//释放锁
 		}
+		//不在使用时要销毁这个锁
+        lock.destroy();
 	}
 	5.  其它API的使用基本和zookeeper原生的一样
+```

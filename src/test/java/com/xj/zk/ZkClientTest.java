@@ -19,7 +19,7 @@ public class ZkClientTest {
     @Before
     public void init() {
         try {
-            zk = new ZkClient("127.0.0.1:2181", 5000, 3000);
+            zk = new ZkClient("10.13.128.214:2181", 5000, 3000);
         } catch (ZkClientException e) {
             e.printStackTrace();
         }
@@ -57,18 +57,21 @@ public class ZkClientTest {
             }
         });
     }
+
     @Test
     public void lock() {
-        SimpleLock lock = zk.getLock("/zk/lock");//创建锁对象
+        final SimpleLock lock = zk.getLock("/zk/lock");//创建锁对象
         try {
             if (lock.lock(0)) {//获得锁
-                System.out.println("-------------");
                 //处理业务
             }
-        }finally {
+        } finally {
             lock.unlock();//释放锁
         }
+        //不在使用时要销毁这个锁
+        lock.destroy();
     }
+
     @After
     public void close() {
         try {

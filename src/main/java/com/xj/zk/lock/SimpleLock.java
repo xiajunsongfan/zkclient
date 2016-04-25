@@ -5,27 +5,21 @@
 package com.xj.zk.lock;
 
 import com.xj.zk.ZkClient;
-import com.xj.zk.ZkClientException;
-import com.xj.zk.listener.Listener;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.Watcher;
-
-import java.net.SocketException;
-import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 /**
- *  该锁为进程间的锁，同一个对象不能在多线程中使用，如果要在多个线程中使用可以创建不同的对象来实现
- * Author: baichuan - xiajun
+ * 该锁为进程间的锁,该对象线程安全支持多线程调用
+ * Author: xiajun
  * Date: 16/04/17 12:57
  */
 public class SimpleLock {
-    private final Semaphore lockObj = new Semaphore(0);
+    private final ThreadLocal<String> currentLock = new ThreadLocal<String>();
     private ZkClient client;
     private String lockPath = "/zk/lock/";
-    private String currentLock;
     private String seqPath;
+    private LockListener lockListener;
 
     public SimpleLock(ZkClient client, String path) {
         this.client = client;
@@ -42,6 +36,8 @@ public class SimpleLock {
         if (!client.exists(lockPath)) {
             this.client.create(lockPath, CreateMode.PERSISTENT);
         }
+        lockListener = new LockListener(this.lockPath, this.client);
+        client.listenChild(this.lockPath, lockListener);
     }
 
     /**
@@ -52,28 +48,19 @@ public class SimpleLock {
      * @return 是否获取到锁，当超时时返回false
      */
     public boolean lock(long timeout) {
+        final Semaphore lockObj = new Semaphore(0);
         String newPath = this.client.create(this.seqPath, "".getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
-        this.currentLock = newPath;
+        currentLock.set(newPath);
         String[] paths = newPath.split("/");
         final String seq = paths[paths.length - 1];
-        lockObj.drainPermits();
-        client.listenChild(this.lockPath, new Listener() {
-            String lock = seq;
-
-            @Override
-            public void listen(String path, Watcher.Event.EventType eventType, byte[] data) throws ZkClientException, SocketException {
-                List<String> locks = client.getChild(lockPath, false);
-                if (check(lock, locks)) {
-                    lockObj.release();
-                }
-            }
-        });
+        lockListener.addQueue(seq, lockObj);
         try {
             boolean islock;
-            if (timeout > 0) {
+            if (timeout >= 1) {
                 islock = lockObj.tryAcquire(timeout, TimeUnit.MILLISECONDS);
             } else {
-                islock = lockObj.tryAcquire();
+                lockObj.acquire();
+                islock = true;
             }
             return islock;
         } catch (InterruptedException e) {
@@ -85,20 +72,14 @@ public class SimpleLock {
     /**
      * 释放锁
      */
-    public void unlock(){
-        client.delete(this.currentLock);
+    public void unlock() {
+        client.delete(currentLock.get());
     }
 
-    private boolean check(String seq, List<String> locks) {
-        boolean isLock = true;
-        for (String lock : locks) {
-            Long lock_ = Long.parseLong(lock);
-            Long seq_ = Long.parseLong(seq);
-            if (seq_ > lock_) {
-                isLock = false;
-                continue;
-            }
-        }
-        return isLock;
+    /**
+     * 销毁锁
+     */
+    public void destroy(){
+        client.unlintenChild(this.lockPath);
     }
 }
