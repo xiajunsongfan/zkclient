@@ -1,11 +1,10 @@
-/*
- * Copyright (c) 2010-2016. Mogujie Inc. All Rights Reserved.
- */
-
 package com.xj.zk.lock;
 
 import com.xj.zk.ZkClient;
 import org.apache.zookeeper.CreateMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -14,14 +13,37 @@ import java.util.concurrent.TimeUnit;
  * Author: xiajun
  * Date: 16/04/17 12:57
  */
-public class SimpleLock {
+public class SimpleLock implements Lock {
+    private final static Logger LOGGER = LoggerFactory.getLogger(SimpleLock.class);
     private final ThreadLocal<String> currentLock = new ThreadLocal<String>();
     private ZkClient client;
     private String lockPath = "/zk/lock/";
     private String seqPath;
     private LockListener lockListener;
+    private static SimpleLock simpleLock = new SimpleLock();
+    private volatile boolean isInit = false;
 
-    public SimpleLock(ZkClient client, String path) {
+    private SimpleLock() {
+    }
+
+    /**
+     * 获取锁实例
+     * @return
+     */
+    public static SimpleLock getInstance(){
+        return simpleLock;
+    }
+
+    /**
+     * 初始化
+     * @param client
+     * @param path
+     */
+    public void init(ZkClient client, String path) {
+        if(isInit){
+            LOGGER.warn("Repeat init simpleLock.");
+            return;
+        }
         this.client = client;
         if (path != null) {
             if (path.indexOf("/") == 0) {
@@ -79,7 +101,7 @@ public class SimpleLock {
     /**
      * 销毁锁
      */
-    public void destroy(){
+    public void destroy() {
         client.unlintenChild(this.lockPath);
     }
 }

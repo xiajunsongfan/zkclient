@@ -6,9 +6,9 @@ import com.xj.zk.listener.Listener;
 import org.apache.zookeeper.Watcher;
 
 import java.net.SocketException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -18,7 +18,7 @@ import java.util.concurrent.Semaphore;
 public class LockListener implements Listener {
     private String lockPath;
     private ZkClient client;
-    private Map<String, Semaphore> waitLocks = new HashMap<String, Semaphore>();
+    private Map<String, Semaphore> waitLocks = new ConcurrentHashMap<String, Semaphore>();
 
     public LockListener(String lockPath, ZkClient client) {
         this.lockPath = lockPath;

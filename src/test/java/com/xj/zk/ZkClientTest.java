@@ -1,6 +1,8 @@
 package com.xj.zk;
 
 import com.xj.zk.listener.Listener;
+import com.xj.zk.listener.StateListener;
+import com.xj.zk.lock.Lock;
 import com.xj.zk.lock.SimpleLock;
 import org.apache.zookeeper.Watcher;
 import org.junit.After;
@@ -57,10 +59,28 @@ public class ZkClientTest {
             }
         });
     }
+    @Test
+    public void listenState(){
+        zk.listenState(Watcher.Event.KeeperState.Disconnected, new StateListener() {
+            @Override
+            public void listen(Watcher.Event.KeeperState state) {
+                System.out.println("--------------Disconnected-----------");
+            }
+        });
+    }
+    @Test
+    public void listenStateExpired(){
+        zk.listenState(Watcher.Event.KeeperState.Expired, new StateListener() {
+            @Override
+            public void listen(Watcher.Event.KeeperState state) {
+                System.out.println("--------------Expired---------------");
+            }
+        });
+    }
 
     @Test
     public void lock() {
-        final SimpleLock lock = zk.getLock("/zk/lock");//创建锁对象
+        final Lock lock = zk.getLock("/zk/lock");//创建锁对象
         try {
             if (lock.lock(0)) {//获得锁
                 //处理业务
@@ -70,6 +90,12 @@ public class ZkClientTest {
         }
         //不在使用时要销毁这个锁
         lock.destroy();
+    }
+    @Test
+    public void haLock(){
+        final Lock lock = zk.getHaLock("/zk/halock");//创建锁对象
+        lock.lock(0);
+        System.out.println("------------------halock-------------------");
     }
 
     @After

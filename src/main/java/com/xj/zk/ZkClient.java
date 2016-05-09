@@ -1,10 +1,14 @@
 package com.xj.zk;
 
 import com.xj.zk.listener.Listener;
+import com.xj.zk.listener.StateListener;
+import com.xj.zk.lock.HALock;
+import com.xj.zk.lock.Lock;
 import com.xj.zk.lock.SimpleLock;
 import com.xj.zk.watcher.WatcherProcess;
 import com.xj.zk.watcher.ZkWatcher;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
@@ -52,11 +56,10 @@ public class ZkClient {
     }
 
     /**
-     *
-     * @param hosts zookeeper服务地址 10.0.1.121:2181,10.0.1.131:2181
-     * @param sessionTimeout 会话超时时间
-     * @param connTimeout 连接超时时间
-     * @param watcherThreadSize  处理watcher的线程数
+     * @param hosts             zookeeper服务地址 10.0.1.121:2181,10.0.1.131:2181
+     * @param sessionTimeout    会话超时时间
+     * @param connTimeout       连接超时时间
+     * @param watcherThreadSize 处理watcher的线程数
      * @throws ZkClientException
      */
     public ZkClient(String hosts, int sessionTimeout, int connTimeout, int watcherThreadSize) throws ZkClientException {
@@ -64,7 +67,7 @@ public class ZkClient {
         this.sessionTimeout = sessionTimeout;
         this.connTimeout = connTimeout;
         watcher = new ZkWatcher(connLock, this);
-        this.process = new WatcherProcess(this,watcherThreadSize);
+        this.process = new WatcherProcess(this, watcherThreadSize);
         this.connection();
     }
 
@@ -328,6 +331,32 @@ public class ZkClient {
     }
 
     /**
+     * 目前只支持2种zookeeper状态
+     * 1. KeeperState.Expired 会话重连后
+     * 2. KeeperState.Disconnected 连接断开时
+     *
+     * @param state
+     */
+    public void listenState(KeeperState state, StateListener listener) {
+        if (state.getIntValue() == KeeperState.Expired.getIntValue()) {
+            process.listenState(state, listener);
+        } else if (state.getIntValue() == KeeperState.Disconnected.getIntValue()) {
+            process.listenState(state, listener);
+        } else {
+            throw new ZkClientException("Listener state not is Expired or Disconnected.");
+        }
+    }
+
+    /**
+     * 取消状态监听
+     *
+     * @param state
+     */
+    public void unlistenState(KeeperState state) {
+        process.nulistenState(state);
+    }
+
+    /**
      * 同步阻塞连接zookeeper
      *
      * @throws ZkClientException
@@ -437,16 +466,33 @@ public class ZkClient {
     public boolean isConnection() {
         return isConnection;
     }
+
     /**
      * 获取锁对象
+     *
      * @param lockPath
      * @return
      */
-    public SimpleLock getLock(String lockPath) {
-        return new SimpleLock(this, lockPath);
+    public Lock getLock(String lockPath) {
+        SimpleLock lock = SimpleLock.getInstance();
+        lock.init(this, lockPath);
+        return lock;
     }
+
+    /**
+     * 获取主从锁，获取到锁的进程将一直持有该锁
+     * 直到该进程死掉，其它进程才能重新争夺该锁
+     * @param lockPath 锁路径 建议使用相对路径
+     * @return  锁对象
+     */
+    public Lock getHaLock(String lockPath) {
+        HALock lock = new HALock(this, lockPath);
+        return lock;
+    }
+
     /**
      * 获取原生的zookeeper客户端对象
+     *
      * @return
      */
     public ZooKeeper getZookeeper() {
