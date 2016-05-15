@@ -73,6 +73,7 @@ public class HALock implements Lock {
 
     @Override
     public void destroy() {
-
+        this.client.unlistenState(Watcher.Event.KeeperState.Expired);
+        this.client.unlistenState(Watcher.Event.KeeperState.Disconnected);
     }
 }
