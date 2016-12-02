@@ -53,7 +53,7 @@ zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重
 		}finally {
 			lock.unlock();//释放锁
 		}
-		//不在使用时要销毁这个锁
+		//不再使用时要销毁这个锁
         lock.destroy();
 	}
 	//5.  其它API的使用基本和zookeeper原生的一样
