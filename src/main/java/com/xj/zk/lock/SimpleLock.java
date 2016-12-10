@@ -28,19 +28,21 @@ public class SimpleLock implements Lock {
 
     /**
      * 获取锁实例
+     *
      * @return
      */
-    public static SimpleLock getInstance(){
+    public static SimpleLock getInstance() {
         return simpleLock;
     }
 
     /**
      * 初始化
+     *
      * @param client
      * @param path
      */
-    public void init(ZkClient client, String path) {
-        if(isInit){
+    public synchronized void init(ZkClient client, String path) {
+        if (isInit) {
             LOGGER.warn("Repeat init simpleLock.");
             return;
         }
@@ -60,6 +62,7 @@ public class SimpleLock implements Lock {
         }
         lockListener = new LockListener(this.lockPath, this.client);
         client.listenChild(this.lockPath, lockListener);
+        isInit = true;
     }
 
     /**
