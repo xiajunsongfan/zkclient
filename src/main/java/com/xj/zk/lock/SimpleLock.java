@@ -66,8 +66,15 @@ public class SimpleLock implements Lock {
     }
 
     /**
-     * 等待获得锁的时间
-     *
+     *获得锁，一直等待，该锁不可重入
+     * @return
+     */
+    public boolean lock() {
+        return this.lock(0);
+    }
+
+    /**
+     * 获得锁，该锁不可重入
      * @param timeout 0 或者 大于0的 毫秒数，当设置为0时，程序将一直等待，直到获取到锁，
      *                当设置大于0时，等待获得锁的最长时间为timeout的值
      * @return 是否获取到锁，当超时时返回false
@@ -89,7 +96,7 @@ public class SimpleLock implements Lock {
             }
             return islock;
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.error("Lock exception", e);
         }
         return false;
     }
@@ -98,7 +105,11 @@ public class SimpleLock implements Lock {
      * 释放锁
      */
     public void unlock() {
-        client.delete(currentLock.get());
+        String node = currentLock.get();
+        if (node != null) {
+            client.delete(node);
+            currentLock.remove();
+        }
     }
 
     /**

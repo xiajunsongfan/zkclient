@@ -34,6 +34,7 @@ public class LockListener implements Listener {
             if (check(lock, locks)) {
                 acqLock = lock;
                 entry.getValue().release();
+                break;
             }
         }
         if (acqLock != null) {
@@ -43,21 +44,29 @@ public class LockListener implements Listener {
 
     /**
      * 添加等待队列
-     * @param path
-     * @param semaphore
+     *
+     * @param path 锁节点
+     * @param semaphore 信号量对象
      */
     public void addQueue(String path, Semaphore semaphore) {
         waitLocks.put(path, semaphore);
     }
 
+    /**
+     * 检查是否可以获得锁
+     *
+     * @param seq   临时节点值
+     * @param locks 所以临时节点
+     * @return boolean
+     */
     private boolean check(String seq, List<String> locks) {
         boolean isLock = true;
+        Long seq_ = Long.parseLong(seq);
         for (String lock : locks) {
             Long lock_ = Long.parseLong(lock);
-            Long seq_ = Long.parseLong(seq);
             if (seq_ > lock_) {
                 isLock = false;
-                continue;
+                break;
             }
         }
         return isLock;

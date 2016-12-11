@@ -40,6 +40,11 @@ public class HALock implements Lock {
     }
 
     @Override
+    public boolean lock() {
+        return this.lock(0);
+    }
+
+    @Override
     public boolean lock(long timeout) {
         final Semaphore lockObj = new Semaphore(0);
         final HALockListener lockListener = new HALockListener(lockPath, this.client, lockObj);
