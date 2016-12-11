@@ -66,7 +66,8 @@ public class SimpleLock implements Lock {
     }
 
     /**
-     *获得锁，一直等待，该锁不可重入
+     * 获得锁，一直等待，该锁不可重入
+     *
      * @return
      */
     public boolean lock() {
@@ -75,6 +76,7 @@ public class SimpleLock implements Lock {
 
     /**
      * 获得锁，该锁不可重入
+     *
      * @param timeout 0 或者 大于0的 毫秒数，当设置为0时，程序将一直等待，直到获取到锁，
      *                当设置大于0时，等待获得锁的最长时间为timeout的值
      * @return 是否获取到锁，当超时时返回false
@@ -86,8 +88,8 @@ public class SimpleLock implements Lock {
         String[] paths = newPath.split("/");
         final String seq = paths[paths.length - 1];
         lockListener.addQueue(seq, lockObj);
+        boolean islock = false;
         try {
-            boolean islock;
             if (timeout >= 1) {
                 islock = lockObj.tryAcquire(timeout, TimeUnit.MILLISECONDS);
             } else {
@@ -97,6 +99,10 @@ public class SimpleLock implements Lock {
             return islock;
         } catch (InterruptedException e) {
             LOGGER.error("Lock exception", e);
+        } finally {
+            if (!islock) {
+                this.unlock();
+            }
         }
         return false;
     }

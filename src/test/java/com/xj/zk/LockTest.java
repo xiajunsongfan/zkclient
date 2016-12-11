@@ -3,7 +3,7 @@ package com.xj.zk;
 import com.xj.zk.lock.Lock;
 
 /**
- * Author: baichuan - xiajun
+ * Author: xiajun
  * Date: 2016/12/11 09:51
  */
 public class LockTest {
@@ -16,19 +16,6 @@ public class LockTest {
                 lock.lock();
                 System.out.println("---------1");
                 try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                lock.unlock();
-            }
-        }).start();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                lock.lock();
-                System.out.println("---------2");
-                try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -36,13 +23,14 @@ public class LockTest {
                 lock.unlock();
             }
         }).start();
+        Thread.sleep(1000);
         new Thread(new Runnable() {
             @Override
             public void run() {
-                lock.lock();
-                System.out.println("---------3");
+                boolean s = lock.lock(3000);
+                System.out.println(s+"---------2");
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
