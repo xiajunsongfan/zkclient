@@ -27,7 +27,7 @@ public class LockTest {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                boolean s = lock.lock(3000);
+                boolean s = lock.lock();
                 System.out.println(s+"---------2");
                 try {
                     Thread.sleep(10000);

@@ -27,25 +27,27 @@ public class LockListener implements Listener {
 
     @Override
     public void listen(String path, Watcher.Event.EventType eventType, byte[] data) throws ZkClientException, SocketException {
-        List<String> locks = client.getChild(lockPath, false);
-        String acqLock = null;
-        for (Map.Entry<String, Semaphore> entry : waitLocks.entrySet()) {
-            String lock = entry.getKey();
-            if (check(lock, locks)) {
-                acqLock = lock;
-                entry.getValue().release();
-                break;
+        if (!waitLocks.isEmpty()) {
+            List<String> locks = client.getChild(lockPath, false);
+            String acqLock = null;
+            for (Map.Entry<String, Semaphore> entry : waitLocks.entrySet()) {
+                String lock = entry.getKey();
+                if (check(lock, locks)) {
+                    acqLock = lock;
+                    entry.getValue().release();
+                    break;
+                }
             }
-        }
-        if (acqLock != null) {
-            waitLocks.remove(acqLock);
+            if (acqLock != null) {
+                waitLocks.remove(acqLock);
+            }
         }
     }
 
     /**
      * 添加等待队列
      *
-     * @param path 锁节点
+     * @param path      锁节点
      * @param semaphore 信号量对象
      */
     public void addQueue(String path, Semaphore semaphore) {

@@ -47,7 +47,7 @@ zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重
 	public void lock() {
 		SimpleLock lock = zk.getLock("/zk/lock");//创建锁对象
 		try {
-			if (lock.lock(0)) {//获得锁
+			if (lock.lock()) {//获得锁
 				//处理业务
 			}
 		}finally {
