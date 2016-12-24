@@ -1,6 +1,5 @@
 package com.xj.zk.lock;
 
-import com.xj.zk.ZkClient;
 import com.xj.zk.ZkClientException;
 import com.xj.zk.listener.Listener;
 import org.apache.zookeeper.Watcher;
@@ -9,6 +8,7 @@ import java.net.SocketException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -16,30 +16,40 @@ import java.util.concurrent.Semaphore;
  * Date: 16/04/25 14:49
  */
 public class LockListener implements Listener {
-    private String lockPath;
-    private ZkClient client;
     private Map<String, Semaphore> waitLocks = new ConcurrentHashMap<String, Semaphore>();
+    private ConcurrentSkipListMap<String, Boolean> totalLockNode = new ConcurrentSkipListMap<String, Boolean>(new NodeComparator<String>());
 
-    public LockListener(String lockPath, ZkClient client) {
-        this.lockPath = lockPath;
-        this.client = client;
+    public LockListener(List<String> nodes) {
+        if (nodes != null) {
+            for (String node : nodes) {
+                totalLockNode.put(node, true);
+            }
+        }
     }
 
     @Override
     public void listen(String path, Watcher.Event.EventType eventType, byte[] data) throws ZkClientException, SocketException {
-        if (!waitLocks.isEmpty()) {
-            List<String> locks = client.getChild(lockPath, false);
-            String acqLock = null;
-            for (Map.Entry<String, Semaphore> entry : waitLocks.entrySet()) {
-                String lock = entry.getKey();
-                if (check(lock, locks)) {
-                    acqLock = lock;
-                    entry.getValue().release();
-                    break;
-                }
-            }
-            if (acqLock != null) {
-                waitLocks.remove(acqLock);
+        String[] node = path.split("/");
+        String seq = node[node.length - 1];
+        if (eventType == Watcher.Event.EventType.NodeCreated) {
+            totalLockNode.put(seq, true);
+        } else {//删除节点事件
+            totalLockNode.remove(seq);
+        }
+        this.release();
+    }
+
+    /**
+     * 释放锁
+     */
+    private void release() {
+        Map.Entry<String, Boolean> minEntry = totalLockNode.firstEntry();
+        if (minEntry != null) {
+            String minNode = minEntry.getKey();
+            if (waitLocks.containsKey(minNode)) {
+                Semaphore lock = waitLocks.get(minNode);
+                lock.release();
+                waitLocks.remove(minNode);
             }
         }
     }
@@ -52,25 +62,8 @@ public class LockListener implements Listener {
      */
     public void addQueue(String path, Semaphore semaphore) {
         waitLocks.put(path, semaphore);
-    }
-
-    /**
-     * 检查是否可以获得锁
-     *
-     * @param seq   临时节点值
-     * @param locks 所以临时节点
-     * @return boolean
-     */
-    private boolean check(String seq, List<String> locks) {
-        boolean isLock = true;
-        Long seq_ = Long.parseLong(seq);
-        for (String lock : locks) {
-            Long lock_ = Long.parseLong(lock);
-            if (seq_ > lock_) {
-                isLock = false;
-                break;
-            }
+        if (totalLockNode.containsKey(path)) {//监听事件早于addQueue进来
+            this.release();
         }
-        return isLock;
     }
 }

@@ -13,13 +13,21 @@ public class LockTest {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                System.out.println("1---------start");
                 lock.lock();
-                System.out.println("---------1");
+                System.out.println("1---------getLock");
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(2000);
+                    lock.lock();
+                    System.out.println("1---------re getLock");
+                    Thread.sleep(3000);
+                    lock.unlock();
+                    System.out.println("1-2--------unlock");
+                    Thread.sleep(3000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                System.out.println("1-1--------unlock");
                 lock.unlock();
             }
         }).start();
@@ -27,10 +35,12 @@ public class LockTest {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                System.out.println("2----------start");
                 boolean s = lock.lock();
-                System.out.println(s+"---------2");
+                System.out.println("2----------getLock");
                 try {
                     Thread.sleep(10000);
+                    System.out.println("2---------unlock");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
