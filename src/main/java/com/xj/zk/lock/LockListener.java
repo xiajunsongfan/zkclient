@@ -5,6 +5,7 @@ import com.xj.zk.listener.Listener;
 import org.apache.zookeeper.Watcher;
 
 import java.net.SocketException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,7 +17,7 @@ import java.util.concurrent.Semaphore;
  * Date: 16/04/25 14:49
  */
 public class LockListener implements Listener {
-    private Map<String, Semaphore> waitLocks = new ConcurrentHashMap<String, Semaphore>();
+    private Map<String, BoundSemaphore> waitLocks = new ConcurrentHashMap<String, BoundSemaphore>();
     private ConcurrentSkipListMap<String, Boolean> totalLockNode = new ConcurrentSkipListMap<String, Boolean>(new NodeComparator<String>());
 
     public LockListener(List<String> nodes) {
@@ -47,7 +48,7 @@ public class LockListener implements Listener {
         if (minEntry != null) {
             String minNode = minEntry.getKey();
             if (waitLocks.containsKey(minNode)) {
-                Semaphore lock = waitLocks.get(minNode);
+                Semaphore lock = waitLocks.get(minNode).getSemaphore();
                 lock.release();
                 waitLocks.remove(minNode);
             }
@@ -57,13 +58,25 @@ public class LockListener implements Listener {
     /**
      * 添加等待队列
      *
-     * @param path      锁节点
-     * @param semaphore 信号量对象
+     * @param path 锁节点
+     * @param bs   信号量对象
      */
-    public void addQueue(String path, Semaphore semaphore) {
-        waitLocks.put(path, semaphore);
+    public void addQueue(String path, BoundSemaphore bs) {
+        waitLocks.put(path, bs);
         if (totalLockNode.containsKey(path)) {//监听事件早于addQueue进来
             this.release();
+        }
+    }
+
+    /**
+     * 中断所有等待锁的线程
+     */
+    public void interrupt() {
+        Map<String, BoundSemaphore> tmp = new HashMap<String, BoundSemaphore>(waitLocks);
+        waitLocks.clear();
+        for (Map.Entry<String, BoundSemaphore> entry : tmp.entrySet()) {
+            Thread thread = entry.getValue().getThread();
+            thread.interrupt();
         }
     }
 }

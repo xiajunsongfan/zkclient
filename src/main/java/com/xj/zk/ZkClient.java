@@ -28,7 +28,7 @@ public class ZkClient {
     private final static Logger LOGGER = LoggerFactory.getLogger(ZkClient.class);
     private final Semaphore connLock = new Semaphore(0);//连接同步锁
     private String hosts;//zookeeper  地址列表
-    private int sessionTimeout;//会话超时时间
+    private int sessionTimeout = 3000;//会话超时时间
     private int connTimeout;//连接超时
     private volatile boolean isConnection = false;//是否连接成功
     private ZooKeeper zk;
@@ -332,10 +332,10 @@ public class ZkClient {
 
     /**
      * 目前只支持2种zookeeper状态
-     * 1. KeeperState.Expired 会话重连后
+     * 1. KeeperState.Expired session 超时
      * 2. KeeperState.Disconnected 连接断开时
      *
-     * @param state
+     * @param state 监听的状态
      */
     public void listenState(KeeperState state, StateListener listener) {
         if (state.getIntValue() == KeeperState.Expired.getIntValue()) {

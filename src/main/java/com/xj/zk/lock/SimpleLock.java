@@ -1,7 +1,9 @@
 package com.xj.zk.lock;
 
 import com.xj.zk.ZkClient;
+import com.xj.zk.listener.StateListener;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +66,12 @@ public class SimpleLock implements Lock {
         List<String> nodes = client.getChild(this.lockPath, false);
         lockListener = new LockListener(nodes);
         client.listenChild(this.lockPath, lockListener);
+        client.listenState(Watcher.Event.KeeperState.Expired, new StateListener() {
+            @Override
+            public void listen(Watcher.Event.KeeperState state) {
+                lockListener.interrupt();
+            }
+        });
         isInit = true;
     }
 
@@ -87,13 +95,15 @@ public class SimpleLock implements Lock {
         ReentrantState state = currentLock.get();
         if (state == null) {
             final Semaphore lockObj = new Semaphore(0);
+            BoundSemaphore bs = new BoundSemaphore(Thread.currentThread(), lockObj);
             String newPath = this.client.create(this.seqPath, "".getBytes(), CreateMode.EPHEMERAL_SEQUENTIAL);
             state = new ReentrantState(newPath);
             currentLock.set(state);
             String[] paths = newPath.split("/");
             final String seq = paths[paths.length - 1];
-            lockListener.addQueue(seq, lockObj);
+            lockListener.addQueue(seq, bs);
             boolean islock = false;
+            boolean isException = false;
             try {
                 if (timeout >= 1) {
                     islock = lockObj.tryAcquire(timeout, TimeUnit.MILLISECONDS);
@@ -103,9 +113,11 @@ public class SimpleLock implements Lock {
                 }
                 return islock;
             } catch (InterruptedException e) {
-                LOGGER.error("Lock exception", e);
+                isException = true;
+                this.currentLock.remove();
+                throw new LockSessionException("Get lock fail,zookeeper session timeout. " + state.getLockPath());
             } finally {
-                if (!islock) {
+                if (!islock && !isException) {
                     this.unlock();
                 }
             }

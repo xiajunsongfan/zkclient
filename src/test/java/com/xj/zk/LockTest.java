@@ -8,7 +8,7 @@ import com.xj.zk.lock.Lock;
  */
 public class LockTest {
     public static void main(String[] args) throws InterruptedException {
-        final ZkClient zk = new ZkClient("127.0.0.1:2181");
+        final ZkClient zk = new ZkClient("192.168.1.104:2181");
         final Lock lock = zk.getLock("/lock1");
         new Thread(new Runnable() {
             @Override
@@ -37,9 +37,9 @@ public class LockTest {
             public void run() {
                 System.out.println("2----------start");
                 boolean s = lock.lock();
-                System.out.println("2----------getLock");
+                System.out.println("2----------getLock---"+s);
                 try {
-                    Thread.sleep(10000);
+                    Thread.sleep(3000);
                     System.out.println("2---------unlock");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
