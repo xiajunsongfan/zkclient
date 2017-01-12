@@ -21,7 +21,7 @@ public class ZkClientTest {
     @Before
     public void init() {
         try {
-            zk = new ZkClient("10.13.128.214:2181", 5000, 3000);
+            zk = new ZkClient("127.0.0.1:2181", 5000, 3000);
         } catch (ZkClientException e) {
             e.printStackTrace();
         }

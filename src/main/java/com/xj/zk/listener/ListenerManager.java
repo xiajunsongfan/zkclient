@@ -2,8 +2,9 @@ package com.xj.zk.listener;
 
 import org.apache.zookeeper.Watcher.Event.EventType;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Author: xiajun
@@ -13,7 +14,7 @@ import java.util.List;
 public class ListenerManager {
     //监听器
     private Listener listener;
-    private List<String> childNode = new ArrayList<String>();
+    private Map<String,Boolean> childNode = new ConcurrentHashMap<String, Boolean>(32);
     //节点数据
     private byte[] data;
     //事件类型
@@ -36,11 +37,11 @@ public class ListenerManager {
         this.listener = listener;
     }
 
-    public List<String> getChildNode() {
+    public Map<String,Boolean> getChildNode() {
         return childNode;
     }
 
-    public void setChildNode(List<String> childNode) {
+    public void setChildNode(Map<String,Boolean> childNode) {
         this.childNode = childNode;
     }
 
