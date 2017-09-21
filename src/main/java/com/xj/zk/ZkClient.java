@@ -248,7 +248,7 @@ public class ZkClient {
      * @throws ZkClientException
      */
     public void unlistenData(String path) throws ZkClientException {
-        this.unlisten(path, false);
+        this.unlisten(path, false, false);
     }
 
     /**
@@ -269,7 +269,7 @@ public class ZkClient {
      * @throws ZkClientException
      */
     public void unlintenChild(String path) throws ZkClientException {
-        this.unlisten(path, true);
+        this.unlisten(path, true, false);
     }
 
     /**
@@ -279,18 +279,18 @@ public class ZkClient {
      * @param listener 监听器
      */
     public void listenChildData(String path, Listener listener) {
-        this.listen(path, listener, true, true);
+        this.listen(path, listener, false, true);
     }
 
     /**
      * 监听孩子节点数据变化
-     * TODO  产生的节点数据监听暂时还没有取消
      *
      * @param path 父节点地址
      */
     public void unlistenChildData(String path) {
-        this.unlisten(path, true);
+        this.unlisten(path, false, true);
     }
+
 
     /**
      * 监听zookeeper信息变化
@@ -320,13 +320,13 @@ public class ZkClient {
      * @param child true表示监听节点的子节点变化
      * @throws ZkClientException
      */
-    private void unlisten(String path, boolean child) throws ZkClientException {
+    private void unlisten(String path, boolean child, boolean childData) throws ZkClientException {
         this.checkStatus();
         if (!this.exists(path)) {
             throw new NullPointerException("listen path " + path + "  not found.");
         }
         if (this.process != null) {
-            this.process.unlisten(path, child);
+            this.process.unlisten(path, child, childData);
         }
     }
 
@@ -482,8 +482,9 @@ public class ZkClient {
     /**
      * 获取主从锁，获取到锁的进程将一直持有该锁
      * 直到该进程死掉，其它进程才能重新争夺该锁
+     *
      * @param lockPath 锁路径 建议使用相对路径
-     * @return  锁对象
+     * @return 锁对象
      */
     public Lock getHaLock(String lockPath) {
         HALock lock = new HALock(this, lockPath);

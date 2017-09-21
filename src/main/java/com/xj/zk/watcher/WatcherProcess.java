@@ -52,16 +52,16 @@ public class WatcherProcess {
      * 设置监听对象,监听节点变化，当监听的事件发生时将回调listen()方法
      *
      * @param path
-     * @param listenChildNode ture 为监听子节点变化，false为监听本节点数据变化
+     * @param ChildNodeChange ture 为监听子节点变化，false为监听本节点数据变化
      * @throws org.apache.zookeeper.KeeperException
      * @throws InterruptedException
      */
-    public void listen(String path, Listener listener, boolean listenChildNode, boolean childData) throws ZkClientException {
+    public void listen(String path, Listener listener, boolean ChildNodeChange, boolean childDataChange) throws ZkClientException {
         try {
-            ListenerManager manager = new ListenerManager(listener, childData);
-            if (listenChildNode) {
+            ListenerManager manager = new ListenerManager(listener, childDataChange, ChildNodeChange);
+            if (ChildNodeChange || childDataChange) {
                 nodeListenerPool.put(path, manager);
-                childChange(path, true);
+                this.childChange(path, true);
             } else {
                 dataListenerPool.put(path, manager);
                 this.dataChange(path);
@@ -74,13 +74,21 @@ public class WatcherProcess {
     /**
      * 取消节点监听
      *
-     * @param path  节点地址
-     * @param child true表示监听子节点变化，false表示监听节点数据变化
+     * @param path      节点地址
+     * @param child     true表示监听子节点变化，false表示监听节点数据变化
+     * @param childData 子节点数据变化
      */
-    public void unlisten(String path, boolean child) throws ZkClientException {
-        if (child) {
+    public void unlisten(String path, boolean child, boolean childData) throws ZkClientException {
+        if (child || childData) {
             if (zkClient.exists(path)) {
-                this.zkClient.getChild(path, false);
+                List<String> nodes = this.zkClient.getChild(path, false);
+                if (childData) {
+                    for (String node : nodes) {
+                        String childNode = path + "/" + node;
+                        dataListenerPool.remove(childNode);
+                        this.zkClient.getData(childNode, false);
+                    }
+                }
             }
             nodeListenerPool.remove(path);
         } else {
@@ -194,17 +202,21 @@ public class WatcherProcess {
             if (status == null) {
                 oldMap.put(node, true);
                 String cpath = path + "/" + node;
-                if (!manager.isChildData()) {
+                if (manager.isChildChange() || manager.isChildDataChange()) {
                     ListenerManager lm = new ListenerManager(manager.getListener());
-                    lm.setData(new byte[1]);
+                    byte[] data = zkClient.getData(cpath, manager.isChildDataChange());
+                    lm.setData(data);
                     lm.setEventType(EventType.NodeCreated);
                     if (!init) {
                         listenerPool.invoker(cpath, lm);
                     } else {
-                        manager.getListener().listen(cpath, EventType.NodeCreated, new byte[1]);
+                        manager.getListener().listen(cpath, EventType.NodeCreated, data);
                     }
-                } else {
-                    listen(cpath, manager.getListener(), false, false);
+                }
+                if (manager.isChildDataChange()) {
+                    //listen(cpath, manager.getListener(), false, false);
+                    ListenerManager dataManager = new ListenerManager(manager.getListener(), false, false);
+                    dataListenerPool.put(cpath, dataManager);
                 }
                 LOGGER.debug("node:{} child change,type:node-create", node);
             }
@@ -214,8 +226,8 @@ public class WatcherProcess {
             if (!changeMap.containsKey(entry.getKey())) {
                 oldMap.remove(entry.getKey());
                 String cpath = path + "/" + entry.getKey();
-                if (manager.isChildData()) {
-                    unlisten(cpath, false);
+                if (manager.isChildDataChange()) {
+                    unlisten(cpath, false, false);
                 }
                 ListenerManager lm = new ListenerManager(manager.getListener());
                 lm.setData(new byte[1]);

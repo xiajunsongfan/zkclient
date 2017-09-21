@@ -59,6 +59,7 @@ public class ZkClientTest {
             }
         });
     }
+
     @Test
     public void listenState(){
         zk.listenState(Watcher.Event.KeeperState.Disconnected, new StateListener() {
