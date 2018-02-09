@@ -1,10 +1,10 @@
 ## zkclient 项目
----
-###项目介绍：
+### 项目介绍：
 zkclient 是对zookeeper java客户端进行的封装，主要实现了断线重连，session过期重注册，watch事件改为listen监听事件,分布式锁等
 
+**注意：** 使用时需要自行编译安装到maven或打成jar使用
 
-###使用方式：
+### 使用方式：
 ```java
 	<dependency>
 		<artifactId>zk-client</artifactId>
